@@ -525,3 +525,112 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+
+# =============================================
+# HELPER FUNCTIONS FOR FUTURE API USE
+# =============================================
+
+def calculate_budget_analytics(budgets: List[dict]) -> dict:
+    """Calculate budget analytics and insights"""
+    total_budget = sum(budget["amount"] for budget in budgets)
+    total_spent = sum(budget["spent"] for budget in budgets)
+    
+    return {
+        "total_budget": total_budget,
+        "total_spent": total_spent,
+        "remaining": total_budget - total_spent,
+        "percentage_used": (total_spent / total_budget * 100) if total_budget > 0 else 0,
+        "categories": [
+            {
+                "name": budget["category"],
+                "budget": budget["amount"],
+                "spent": budget["spent"],
+                "remaining": budget["amount"] - budget["spent"],
+                "percentage": (budget["spent"] / budget["amount"] * 100) if budget["amount"] > 0 else 0
+            }
+            for budget in budgets
+        ]
+    }
+
+def calculate_debt_payoff_strategies(debts: List[dict]) -> dict:
+    """Calculate different debt payoff strategies"""
+    total_debt = sum(debt["balance"] for debt in debts)
+    total_minimum = sum(debt["minimum_payment"] for debt in debts)
+    
+    # Sort for different strategies
+    avalanche_order = sorted(debts, key=lambda x: x["interest_rate"], reverse=True)
+    snowball_order = sorted(debts, key=lambda x: x["balance"])
+    
+    return {
+        "total_debt": total_debt,
+        "total_minimum_payment": total_minimum,
+        "avalanche_strategy": avalanche_order,
+        "snowball_strategy": snowball_order,
+        "estimated_payoff_time": calculate_payoff_time(debts),
+        "total_interest": calculate_total_interest(debts)
+    }
+
+def calculate_payoff_time(debts: List[dict]) -> dict:
+    """Calculate estimated payoff time for debts"""
+    # Simplified calculation - in real app would be more complex
+    total_debt = sum(debt["balance"] for debt in debts)
+    total_payment = sum(debt["minimum_payment"] for debt in debts)
+    
+    if total_payment <= 0:
+        return {"years": 0, "months": 0}
+    
+    months = total_debt / total_payment
+    years = int(months // 12)
+    remaining_months = int(months % 12)
+    
+    return {"years": years, "months": remaining_months}
+
+def calculate_total_interest(debts: List[dict]) -> float:
+    """Calculate total interest over debt lifetime"""
+    # Simplified calculation
+    total_interest = 0
+    for debt in debts:
+        balance = debt["balance"]
+        rate = debt["interest_rate"] / 100 / 12  # Monthly rate
+        payment = debt["minimum_payment"]
+        
+        # Simple interest calculation
+        if payment > balance * rate:
+            months = balance / (payment - balance * rate)
+            total_interest += months * payment - balance
+        else:
+            total_interest += balance * 0.5  # Fallback estimation
+    
+    return total_interest
+
+def calculate_investment_returns(investments: List[dict]) -> dict:
+    """Calculate investment portfolio analytics"""
+    total_value = sum(inv["current_value"] for inv in investments)
+    total_cost = sum(inv["purchase_price"] * inv["shares"] for inv in investments)
+    total_return = total_value - total_cost
+    
+    return {
+        "total_value": total_value,
+        "total_cost": total_cost,
+        "total_return": total_return,
+        "return_percentage": (total_return / total_cost * 100) if total_cost > 0 else 0,
+        "asset_allocation": calculate_asset_allocation(investments)
+    }
+
+def calculate_asset_allocation(investments: List[dict]) -> dict:
+    """Calculate asset allocation percentages"""
+    total_value = sum(inv["current_value"] for inv in investments)
+    
+    allocation = {}
+    for investment in investments:
+        asset_type = investment["asset_type"]
+        if asset_type not in allocation:
+            allocation[asset_type] = 0
+        allocation[asset_type] += investment["current_value"]
+    
+    # Convert to percentages
+    for asset_type in allocation:
+        allocation[asset_type] = (allocation[asset_type] / total_value * 100) if total_value > 0 else 0
+    
+    return allocation
